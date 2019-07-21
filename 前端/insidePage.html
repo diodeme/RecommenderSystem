@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="referrer" content="never">
+	<!--针对豆瓣防盗链-->
+	<title>个人信息</title>
+	<meta name="viewport"
+		content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+
+	<script src="js/jquery-3.4.1.min.js"></script>
+	<script src="js/bootstrap.bundle.js"></script>
+	<script src="js/jquery.raty.min.js"></script>
+	<link rel="stylesheet" href="css/style.css">
+	<link href="css/bootstrap.min.css" rel="stylesheet">
+	<link rel="stylesheet" href="css/all.css">
+	<link href="//netdna.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+	<link rel="stylesheet" href="css/build.css">
+	<style>
+		.img-responsive {
+			display: inline-block;
+			height: auto;
+			max-width: 100%;
+		}
+	</style>
+</head>
+
+<body>
+
+	<div class="wrapper">
+		<div class="profile-card js-profile-card">
+			<div style="float: right">
+				<i class="fa fa-cog" aria-hidden="true" onclick="setting()"></i>
+
+			</div>
+			<div class="profile-card__img">
+				<img src="timg.jpg" alt="profile card">
+				<i class="fa fa-cog" aria-hidden="true"></i>
+			</div>
+
+			<div class="profile-card__cnt js-profile-cnt">
+				<div>
+					<div class="profile-card__name" id="name"></div>
+
+				</div>
+				<div class="profile-card__txt" id="txt"></div>
+			</div>
+			<div class="profile-card-loc">
+				<button class="profile-card__button button--blue" onclick="favor()">您的评分</button>
+				<button class="profile-card__button button--blue" onclick="rec()">猜您喜欢</button>
+
+			</div>
+
+			<div class="profile-card-loc">
+				<button class="profile-card__button button--orange" onclick="logout()">SIGNOUT</button>
+			</div>
+		</div>
+	</div>
+
+
+	<!--favor Modal -->
+	<div class="modal fade " id="favorModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLongTitle"
+		aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="exampleModalLongTitle">您的评分</h5>
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+					</button>
+				</div>
+				<div class="modal-body" id="favorModalBody">
+					<div class="row" id="movieGallery"></div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-dismiss="modal">关闭</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!--rec Modal -->
+	<div class="modal fade" id="recModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLongTitle"
+		aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="recTitle">猜您喜欢</h5>
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+					</button>
+				</div>
+				<div class="modal-body" id="recModalBody">
+					<div class="row" id="recMovies"></div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-dismiss="modal">关闭</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!--setting Modal -->
+	<div class="modal fade" id="settingModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLongTitle"
+		aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="exampleModalLongTitle">系统设置</h5>
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+					</button>
+				</div>
+				<div class="modal-body">
+					<strong>选择算法</strong>
+					<div class="radio radio-info radio-inline">
+						<input type="radio" class="recRadio" value="user" id="user" name="radioInline" checked>
+						<label for="user">UserCF(推荐，快且准确) </label>
+					</div>
+					<div class="radio radio-info radio-inline">
+						<input type="radio" class="recRadio" value="item" id="item" name="radioInline">
+						<label for="item"> ItemCF(较慢) </label>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-secondary" data-dismiss="modal">关闭</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script>
+			var name = '';
+			var ID = '';
+			var account = '';
+			var movieUrl = 'https://douban.uieee.com/v2/movie/subject/';
+			var recd = '';
+			//预加载函数：判断是否登录
+			(function ($) {
+				$.ajax({
+					async: false,
+					type: "GET",
+					url: "http://api.yuuuha.com:8088/user/login",
+					xhrFields: {
+						withCredentials: true
+					},
+					success: function (response) {
+						if (response.status != 200)
+							window.location.replace("index.html");
+						else {
+							name = response.data.username;
+							ID = response.data.id;
+							account = response.data.account;
+							$("#name").text(name);
+							$("#txt").html("<strong>ID:</strong>" + ID +
+								" <strong>Account:</strong>" + account);
+						}
+
+					}
+				});
+			})(jQuery);
+
+			function logout() {
+				$.ajax({
+					type: "GET",
+					url: "http://api.yuuuha.com:8088/user/logout",
+					xhrFields: {
+						withCredentials: true
+					},
+					success: function (response) {
+						if (response == 1)
+							window.location.replace("index.html");
+					}
+				});
+			}
+
+			function favor() {
+				$.ajax({
+					type: "GET",
+					url: "http://api.yuuuha.com:5000/" + ID + "/favor",
+					dataType: "json",
+					success: function (response) {
+						showMovie(response);
+					}
+				});
+				$("#favorModal").modal("show");
+			}
+
+			function rec() {
+				var val = $('input[class="recRadio"]:checked').val();
+				if (recd != val) {
+					recd = val;
+					$("#recMovies").html("");
+				}
+				$.ajax({
+					type: "GET",
+					url: "http://api.yuuuha.com:5000/rec/" + recd + "/" + ID,
+					dataType: "json",
+					success: function (response) {
+						recMovies(response);
+					}
+				});
+				if (recd == "user")
+					$('#recTitle').html("<strong>猜您喜欢</strong> 您当前选择的是基于用户的协同过滤算法，可在设置中进行修改");
+				else if (recd == "item")
+					$('#recTitle').html("<strong>猜您喜欢</strong> 您当前选择的是基于物品的协同过滤算法，运算速度较慢，请稍等，可在设置中进行修改");
+				$("#recModal").modal("show");
+			}
+
+			function setting() {
+				$("#settingModal").modal("show");
+			}
+			/*
+			<div class='col-sm-3'>
+										<div class='card'>
+											<img class='card-img-top' src='timg.jpg' alt='Card image cap'>
+											<div class='card-body'>
+
+											</div>
+										</div>
+									</div>
+			*/
+			function showMovie(movies) {
+				if ($("#movieGallery").html().length != 0)
+					return;
+				var html = '';
+				i = 0;
+				//for (var i = 0; i < movies.length; i++) {
+				while (i < movies.length) {
+					doubanId = movies[i].doubanId;
+
+					a = 0;
+					//	alert(movie.电影名);
+					$.ajax({
+						type: "GET",
+						url: movieUrl + doubanId,
+						async: false,
+						dataType: "jsonp",
+						xhrFields: {
+							withCredentials: true
+						},
+
+						crossDomain: true,
+						//async:false,
+						success: function (response) {
+							rating="";
+							for(var j=0;j<movies.length;j++){
+								if(response.id==movies[j].doubanId){
+									rating=movies[j].rating;
+									break;
+								}			
+							}
+							//html +=
+							$("#movieGallery").append("<div class='col-sm-3'>" +
+								"<div class='card'>" +
+								"<img class='card-img-top' src='" + response.images.small +
+								//https://images.weserv.nl/?url=
+								"' alt='Card image cap'>" +
+								"<div class='card-body'>" +
+								"<div><strong>"+response.title+"</strong></div>" +
+								"<div id='star" + a + "' data-score='" +
+								rating +
+								"'></div>" +
+								"</div>" +
+								"</div>" +
+								"</div>")
+
+							$('#star' + a).raty({
+
+								score: function () {
+
+									return $(this).attr('data-score');
+
+								}
+
+							});
+							a++;
+						},
+						error: function (response) {
+							
+						}
+					});
+					i++;
+				}
+
+
+				//$("#movieGallery").html(html);
+			};
+
+			function recMovies(movies) {
+				if ($("#recMovies").html().length != 0)
+					return;
+				var html = '';
+				for (var i = 0; i < movies.length; i++) {
+					//	alert(movie.电影名);
+					$.ajax({
+						type: "GET",
+						url: movieUrl + movies[i][0],
+						dataType: "jsonp",
+						xhrFields: {
+							withCredentials: true
+						},
+						crossDomain: true,
+						//async:false,
+						success: function (response) {
+							sim="";
+							for(var j=0;j<movies.length;j++){
+								if(response.id==movies[j][0]){
+									sim=movies[j][1];
+									break;
+								}			
+							}
+							//html +=
+							$("#recMovies").append("<div class='col-sm-3'>" +
+								"<div class='card'>" +
+								"<img class='card-img-top img-responsive' src='" + response.images.small +
+								//https://images.weserv.nl/?url=
+								"' alt='Card image cap'>" +
+								"<div class='card-body'>" +
+										"<div><strong>"+response.title+"</strong></div>" +
+										"<div>相似度："+sim+"</div>" +
+								"</div>" +
+								"</div>" +
+								"</div>")
+						},
+						error: function (response) {
+
+						}
+					});
+				}
+				//$("#movieGallery").html(html);
+			};
+		</script>
+
+
+
+
+
+
+</body>
+
+</html>
